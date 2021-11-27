@@ -1,0 +1,10 @@
+{"cmd": "login",
+ "username": "joe",
+ "password": "123123"}
+
+ {"cmd": "select_class",
+ "classname": "warrior"}
+
+ {"cmd": "move_unit",
+ "x": 5,
+ "y": 3}
