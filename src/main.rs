@@ -28,6 +28,7 @@ use serde::{Deserialize, Serialize};
 
 use std::{
     collections::HashMap,
+    collections::HashSet,
     sync::{Arc, Mutex},
 };
 
@@ -50,6 +51,12 @@ struct Account {
     username: String,
     password: String,
     class: HeroClass,
+}
+
+#[derive(Clone, Debug)]
+struct ExploredMap {
+    player_id: i32,
+    tiles: HashSet<i32>
 }
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
@@ -82,6 +89,11 @@ struct MoveEvent {
     x: u32, 
     y: u32,
     run_at: i32
+}
+
+#[derive(Debug)]
+struct Perception {
+    data: Vec<map::MapTile>
 }
 
 #[derive(Debug, Default)]
@@ -401,7 +413,8 @@ fn handle_move(player_id: i32, x: u32, y: u32, client_to_game_sender: CBSender<P
 }
 
 fn message_system(mut commands: Commands, clients: Res<Clients>, client_to_game_receiver: Res<CBReceiver<PlayerEvent>>, 
-    mut events: ResMut<Events<MoveEvent>>, mut query: Query<(Entity, &mut MapObj)>) {
+    mut events: ResMut<Events<MoveEvent>>, map: Res<map::Map>, mut query: Query<(Entity, &mut MapObj)>) {
+
     //Broadcast a message to each connected client on each Bevy System iteration.
     for (_id, client) in clients.lock().unwrap().iter() {
         //println!("{:?}", client);
@@ -417,14 +430,26 @@ fn message_system(mut commands: Commands, clients: Res<Clients>, client_to_game_
         let res  = match evt { 
             PlayerEvent::NewPlayer{player_id} => {
                 let map_obj = MapObj {
-                    x: 0,
-                    y: 0,
+                    x: 16,
+                    y: 36,
                     player_id: player_id,
                     name: "Hero".to_string(),
                     template: "Hero_Mage".to_string()
                 };
-            
+
+                let tile_index : usize = 16 * 60 + 36;
+
+                println!("(16,36): {:?}", map.base[tile_index]);
+
+
+                //println!("adj: {:?}", adj);
+
                 commands.spawn().insert(map_obj);
+
+                let explored_map = ExploredMap {
+                    player_id: player_id,
+                    tiles: HashSet::new()
+                };
 
                 {}
             }

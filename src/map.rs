@@ -5,6 +5,8 @@ use std::io::BufReader;
 use std::path::Path;
 use std::convert::TryInto;
 
+use serde::{Deserialize, Serialize};
+
 use tiled::{parse, LayerData};
 
 
@@ -37,21 +39,32 @@ pub enum TileType {
     Unknown
 }
 
+#[derive(Debug, Clone)]
 pub struct TileInfo {
     pub tile_type: TileType,
     pub layers: Vec<u32>
 }
 
+#[derive(Debug)]
 pub struct Map {
     pub width: u32,
     pub height: u32,
     pub base: Vec<TileInfo>
 }
 
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub struct MapTile {
+    pub x: i32,
+    pub y: i32,
+    pub t: Vec<u32>
+}
+
+
 impl FromWorld for Map {
     fn from_world(_world: &mut World) -> Self {
         let map: Map = load_map();
 
+        println!("{:?}", map);
         //Return map
         map
     }
@@ -92,9 +105,13 @@ fn load_map() -> Map {
 
             if let LayerData::Finite(layer_tiles) = &layer.tiles {
                 for row in layer_tiles.iter() {
-                    for col in row.iter() {                
-                        map.base[index].tile_type = gid_to_tiletype(col.gid);    
-                        map.base[index].layers.push(col.gid);
+                    for col in row.iter() { 
+                        
+                        //Do not store if tile is 0
+                        if col.gid != 0 {                            
+                            map.base[index].tile_type = gid_to_tiletype(col.gid);    
+                            map.base[index].layers.push(col.gid);
+                        }
 
                         index += 1;
                     }
@@ -105,6 +122,31 @@ fn load_map() -> Map {
     
     map
 }
+
+pub fn get_neighbour_tiles(center_x: i32, center_y: i32, r: u32, map: Map) -> Vec<MapTile> {
+
+    let mut tiles = Vec::new();
+    let neighbours = range((center_x, center_y), r);
+
+    for neighbour in neighbours {
+        let (x, y) = neighbour;
+
+        //Reminder tile_index = y * width + x
+        let tile_index: usize = (y as usize) * (WIDTH as usize) + (x as usize);
+        let layers = map.base[tile_index].layers.clone();
+
+        let tile = MapTile{
+            x: x,
+            y: y,
+            t: layers
+        };
+
+        tiles.push(tile);
+    }
+
+    tiles
+}
+
 
 fn gid_to_tiletype(gid: u32) -> TileType {
     match gid {
@@ -171,7 +213,9 @@ fn distance(src_pos: (i32, i32), dst_pos: (i32, i32)) -> i32 {
     ((sx - dx).abs() + (sy - dy).abs() + (sz - dz).abs()) / 2
 }
 
-fn range((q, r): (i32, i32), n: i32) -> Vec<(i32, i32)> {
+pub fn range((q, r): (i32, i32), num: u32) -> Vec<(i32, i32)> {
+    let n = num as i32;
+
     let mut result: Vec<(i32, i32)> = Vec::new();
 
     let (cx, cy, cz) = odd_q_to_cube((q, r));
@@ -226,12 +270,30 @@ mod tests {
     fn test_load_map() {
         let map: Map = load_map();
 
-        let tile_index : usize = (1 * WIDTH + 3).try_into().unwrap();
+        let tile_index : usize = (35 * WIDTH + 17).try_into().unwrap();
                 
-        assert_eq!(map.base[tile_index].tile_type, TileType::FrozenForest);
-        assert_eq!(map.base[tile_index].layers, vec![1, 26]);
+        assert_eq!(map.base[tile_index].layers, vec![13]);
+        assert_eq!(map.base[tile_index].tile_type, TileType::HillsGrasslands);
 
     }
+
+     #[test]
+    fn test_get_neighbour_tiles() {
+        let map: Map = load_map();
+
+        let mut tiles = get_neighbour_tiles(16, 36, 2, map);
+
+        let test_tiles = r#"[{"t":[13],"x":17,"y":34},{"t":[1],"x":16,"y":37},{"t":[1],"x":16,"y":35},{"t":[13],"x":18,"y":36},{"t":[5],"x":15,"y":36},{"t":[1],"x":17,"y":37},{"t":[1],"x":15,"y":34},{"t":[5],"x":14,"y":37},{"t":[13],"x":17,"y":35},{"t":[1],"x":16,"y":38},{"t":[1],"x":14,"y":35},{"t":[1],"x":16,"y":36},{"t":[1],"x":18,"y":37},{"t":[13],"x":16,"y":34},{"t":[5],"x":15,"y":37},{"t":[1],"x":18,"y":35},{"t":[13],"x":15,"y":35},{"t":[1],"x":17,"y":36},{"t":[13],"x":14,"y":36}]"#;
+
+        let deserialized_test_tiles: Vec<MapTile>  = serde_json::from_str(&test_tiles).unwrap();
+
+        println!("{:?}", deserialized_test_tiles);
+
+        for tile in tiles {
+            assert_eq!(deserialized_test_tiles.contains(&tile), true);
+        }
+    }
+    
 
     #[test]
     fn test_odd_q_to_cube() {
