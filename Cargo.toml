@@ -1,22 +1,37 @@
 [package]
-name = "siege_perilous_rust"
+name = "siege_perilous"
 version = "0.5.0"
 authors = ["peter.holko@gmail.com"]
-edition = "2018"
+edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "siege_perilous"
+path = "src/main.rs"
+
+[lib]
+name = "siege_perilous"
+path = "src/lib.rs"
 
 [dependencies]
-bevy = { version = "*", default-features = false }
+bevy = { version = "0.8", default-features = false }
 crossbeam-channel = "0.5.1"
 tokio-tungstenite = "*"
 futures-util = { version = "0.3", default-features = false, features = ["async-await", "sink", "std"] }
 pin-project = "1.0"
 futures-channel = "0.3"
-tokio = { version = "1.0.0", default-features = false, features = ["io-std", "macros", "net", "rt-multi-thread", "time", "sync"] }
+tokio = { version = "1.0.0", default-features = false, features = ["io-std", "macros", "net", "rt-multi-thread", "time", "sync", "process"] }
 url = "2.0.0"
 env_logger = "0.7"
 async-compat = "0.2.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tiled = "0.9.3"
+glob = "0.3.0"
+lazy_static = "1.4.0"
+itertools = "0.10.5"
+
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "2.1"
+tungstenite = "0.17.3"
